@@ -46,6 +46,7 @@ void copy(struct process *to, struct  process from){
 	to->turn_around_time = from.turn_around_time;
 	to->waiting_time = from.waiting_time;
 	to->response_time = from.response_time;
+	to->remaining_time = from.remaining_time;
 }
 
 void FCFS(int num_of_process, struct process prscs[num_of_process]){
@@ -92,27 +93,31 @@ int shortestJob(int num_of_process, struct process prscs[num_of_process], int el
 	return shortest_index;
 }
 
+void sortProcess(int num_of_process, struct process prscs[num_of_process]){
+    for(int i=0;i<num_of_process-1;i++){
+        struct process curr;
+        copy(&curr, prscs[i]);
+        int min = i;
+        int j=i+1;
+        for(j=i+1;j<num_of_process;j++){
+            if(prscs[j].arrival_time < curr.arrival_time){
+                copy(&curr, prscs[j]);
+                min = j;
+            }
+            else if(prscs[j].arrival_time == curr.arrival_time && prscs[j].burst_time < curr.burst_time){
+                copy(&curr, prscs[j]);
+                min = j;
+            }
+        }
+        if(min!=i){
+            copy(&prscs[min], prscs[i]);
+            copy(&prscs[i], curr);
+        }
+    }
+}
+
 void SJF(int num_of_process, struct process prscs[num_of_process]){
-	for(int i=0;i<num_of_process-1;i++){
-		struct process curr;
-		copy(&curr, prscs[i]);
-		int min = i;
-		int j=i+1;
-		for(j=i+1;j<num_of_process;j++){
-			if(prscs[j].arrival_time < curr.arrival_time){
-				copy(&curr, prscs[j]);
-				min = j;
-			}
-			else if(prscs[j].arrival_time == curr.arrival_time && prscs[j].burst_time < curr.burst_time){
-				copy(&curr, prscs[j]);
-				min = j;
-			}
-		}
-		if(min!=i){
-			copy(&prscs[min], prscs[i]);
-			copy(&prscs[i], curr);
-		}   
-	} 
+	sortProcess(num_of_process, prscs);
 	int time_elapsed = prscs[0].arrival_time;
 	int done[num_of_process];
 	for(int i=0; i<num_of_process; i++) done[i] = 0;
@@ -127,22 +132,88 @@ void SJF(int num_of_process, struct process prscs[num_of_process]){
 		done[job] = 1;
 		job = shortestJob(num_of_process, prscs, time_elapsed, done);
 	}
-	
+}
 
+int allDone(int num_of_process, int done[num_of_process]){
+	for(int i=0;i<num_of_process;i++){
+		if(done[i]==0) return 0;
+	}
+	return 1;
 }
 
 
+void roundRobin(int num_of_process, struct process prscs[num_of_process], int time_quantum){
+	
+	 for(int i=0;i<num_of_process-1;i++){
+        struct process curr;
+        copy(&curr, prscs[i]);
+        int min = i;
+        int j=i+1;
+        for(j=i+1;j<num_of_process;j++){
+            if(prscs[j].arrival_time < curr.arrival_time){
+                copy(&curr, prscs[j]);
+                min = j;
+            }
+        }
+        if(min!=i){
+            copy(&prscs[min], prscs[i]);
+            copy(&prscs[i], curr);
+        }
+    }
+	printdata(num_of_process, prscs);	
+	int done[num_of_process];
+	for(int i=0;i<num_of_process;i++) done[i] = 0;
+	int time_elapsed = prscs[0].arrival_time;
+	while(!allDone(num_of_process, done)){
+		for(int i=0;i<num_of_process;i++){
+			//see if the process has arrived and incomplete
+			if(prscs[i].arrival_time <= time_elapsed && !done[i]){ 
+				//the process has arrived let's check if has any thing remaining 
+				if(prscs[i].remaining_time > 0){
+					//there's something to execute 
+					//let's see if it requries less than or greater than equal to our quantum time
+					if(prscs[i].remaining_time <= time_quantum){
+						//process
+						//the prscs[i] will comeplete in this cycle let's calulate it's details and set it done
+						time_elapsed += prscs[i].remaining_time;
+						prscs[i].completion_time = time_elapsed;
+						prscs[i].remaining_time = 0;
+						done[i] = 1;
+						prscs[i].turn_around_time = prscs[i].completion_time - prscs[i].arrival_time;
+						prscs[i].waiting_time = prscs[i].turn_around_time - prscs[i].burst_time;
+						prscs[i].response_time = prscs[i].burst_time + prscs[i].waiting_time;
+					}
+					else{
+						//there's something to execute, but the process wont be done here
+						//we step one more quantum forward in time
+						//and process that much of the current process
+						time_elapsed += time_quantum;
+						prscs[i].remaining_time -= time_quantum;
+						printf("\n%s %d", prscs[i].name, time_elapsed);
+					}
+				}
+			}
+		}
+	}
+}
+
 int main(){
 	int num_of_process;
+	int time_quantum;
+
 	printf("Enter number of process: ");
 	scanf("%d" , &num_of_process);
- 	struct process processes[num_of_process];
+ 	printf("Enter time quantum for round-robin: "); scanf("%d", &time_quantum);
+	struct process processes[num_of_process];
 	for(int i=0;i < num_of_process; i++) read(&processes[i]);
 	printf("First come first serve output: \n ");
 	FCFS(num_of_process, processes);
 	printdata(num_of_process, processes);
 	printf("\nShortest Job First output: \n");
 	SJF(num_of_process, processes);
+	printdata(num_of_process, processes);
+	printf("\nRound robin output: \n");
+	roundRobin(num_of_process, processes, time_quantum);
 	printdata(num_of_process, processes);
 
 }

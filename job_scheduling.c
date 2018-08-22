@@ -40,7 +40,7 @@ void printdata(int num_of_process, struct process prscs[num_of_process]){
 	printf("|________________|______________|____________|_________________|_________________|______________|_______________|\n");
 	avg_waiting_time /= num_of_process;
 	printf("Average waiting time : %.2f\n", avg_waiting_time);
-	utilization = (total_burst / (idle_time + total_burst)) * 100;
+	utilization = (1.0*total_burst / (idle_time + total_burst)) * 100.0;
 	printf("CPU utilization      : %.2f%%\n", utilization);
 }
 
@@ -72,7 +72,7 @@ int firstJob(int num_of_process, struct process prscs[num_of_process], int time_
 	int jobIndex = -1;
 	int earliest = INT_MAX;
 	for(int i=0;i < num_of_process; i++){
-		if(!done[i] && prscs[i].arrival_time <= earliest){
+		if(!done[i] && prscs[i].arrival_time <= earliest && prscs[i].arrival_time <= time_elapsed){
 			jobIndex = i;
 			earliest = prscs[i].arrival_time;
 		}
